@@ -4,23 +4,28 @@ from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from transformers import CLIPTokenizer
 
 from D3D.dataset import DummyDataset
 from D3D.unet import VoxelUNet
 from D3D.sample import Sampler
 
 
-epochs = 20
+epochs = 10
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # 使用虚拟数据集进行训练
-dataset = DummyDataset(size=800)
-dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+dataset = DummyDataset(size=1600)
+dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
 model = VoxelUNet().to(device)
-tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
-optimizer = AdamW(model.parameters(), lr=1e-4)
 diffusion = Sampler(device)
+
+optimizer = AdamW(
+    [
+        {'params': model.parameters()},
+        {'params': diffusion.text_encoder.parameters(), 'lr': 1e-5}
+    ],
+    lr=1e-4
+)
 loss_history = []
 
 for epoch in range(epochs):
@@ -29,15 +34,11 @@ for epoch in range(epochs):
     for batch in tqdm(dataloader, desc=f'Epoch {epoch + 1}/{epochs}'):
         voxel, prompt = batch
         voxel = voxel.unsqueeze(1).to(device)
-
-        inputs = tokenizer(prompt, return_tensors='pt', padding=True, truncation=True).to(device)
-        text_embed = model.text_encoder(inputs.input_ids).to(device)
-
         t = diffusion.sample_timesteps(voxel.shape[0])
         x_t, noise = diffusion.noise_voxels(voxel, t)
-
+        text_emb = diffusion.text_encoder(prompt).to(device)
         optimizer.zero_grad()
-        pred_noise = model(x_t, t, text_embed)
+        pred_noise = model(x_t, t, text_emb)
         loss = nn.MSELoss()(pred_noise, noise)
         loss.backward()
         optimizer.step()

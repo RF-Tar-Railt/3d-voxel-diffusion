@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
@@ -7,20 +6,26 @@ from tqdm import tqdm
 
 from D3D.dataset import DummyDataset
 from D3D.unet import VoxelUNet
-from D3D.sample import Sampler
+from D3D.diffusion import Diffusion
 
 
-epochs = 20
+epochs = 10
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.set_default_device(device)
-model = VoxelUNet().to(device)
+model = VoxelUNet(
+    in_channels=1,
+    out_channels=1,
+    channel_mult=(1, 2, 2),
+    num_res_blocks=1,
+    attention_resolutions=(2, 4)
+).to(device)
 
 # 使用虚拟数据集进行训练
-dataset = DummyDataset(size=1600)
-dataloader = DataLoader(dataset, batch_size=8, shuffle=True, generator=torch.Generator(device=device))
+dataset = DummyDataset(size=800)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True, generator=torch.Generator(device=device))
 
 optimizer = AdamW(model.parameters(), lr=1e-4)
-diffusion = Sampler(device)
+diffusion = Diffusion(device)
 loss_history = []
 
 for epoch in range(epochs):
@@ -28,13 +33,11 @@ for epoch in range(epochs):
     total_loss = 0
     for batch in tqdm(dataloader, desc=f'Epoch {epoch + 1}/{epochs}'):
         voxel, _ = batch
-        voxel = voxel.unsqueeze(1).to(device)
-        t = diffusion.sample_timesteps(voxel.shape[0])
-        x_t, noise = diffusion.noise_voxels(voxel, t)
-
+        voxel = voxel.to(device)
         optimizer.zero_grad()
-        pred_noise = model(x_t, t)
-        loss = nn.MSELoss()(pred_noise, noise)
+
+        t = diffusion.sample_timesteps(voxel.shape[0])
+        loss = diffusion.train_losses(model, voxel, t)
         loss.backward()
         optimizer.step()
 

@@ -11,13 +11,19 @@ model.eval()
 
 diff = Sampler(device)
 
-test_ = diff.sample_with_text(model, "A cube with size 4", num_samples=1)
+test_ = diff.sample_with_text(model, "A sphere with radius 6", num_samples=9)
 print(test_.shape)
 
 fig = plt.figure(figsize=(10, 10))
-ax: Axes3D = fig.add_subplot(1, 1, 1, projection='3d')  # type: ignore
-ax.voxels(test_[0][0], edgecolor='k')
-ax.set_xlim([0, 32])
-ax.set_ylim([0, 32])
-ax.set_zlim([0, 32])
+for i in range(9):
+    ax: Axes3D = fig.add_subplot(3, 3, i + 1, projection='3d')  # type: ignore
+    ax.voxels(test_[i][0], edgecolor='k')
+    ax.set_xlim([0, 32])
+    ax.set_ylim([0, 32])
+    ax.set_zlim([0, 32])
+# ax: Axes3D = fig.add_subplot(1, 1, 1, projection='3d')  # type: ignore
+# ax.voxels(test_[0][0].cpu().numpy(), edgecolor='k')
+# ax.set_xlim([0, 32])
+# ax.set_ylim([0, 32])
+# ax.set_zlim([0, 32])
 plt.show()

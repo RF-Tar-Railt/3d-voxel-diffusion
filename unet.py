@@ -82,9 +82,7 @@ class ResidualBlock(TimestepBlock):
     def forward(self, input, t_emb=None):
         out = self.conv1(input)
         if t_emb is not None:
-            t_emb = self.time_mlp(t_emb)
-            while len(t_emb.shape) < len(out.shape):
-                t_emb = t_emb[..., None]
+            t_emb = self.time_mlp(t_emb)[:, :, None, None, None]
             out = out + t_emb
         out = self.conv2(out)
         return out + self.shortcut(input)
@@ -248,6 +246,8 @@ class VoxelUNet(nn.Module):
         hs = []
         emb = self.time_embed(timestep_embedding(t, self.model_channels))
         if y is not None:
+            if isinstance(y, int):
+                y = torch.tensor(y, device=x.device)
             emb = emb + self.label_embed(y)
         h = x
         h = self.init_conv(h)

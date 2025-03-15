@@ -14,8 +14,8 @@ epochs = 10
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.set_default_device(device)
 model = VoxelUNet(
-    in_channels=4,
-    out_channels=8,
+    in_channels=1,
+    out_channels=2,
     channel_mult=(1, 2, 2),
     num_res_blocks=1,
     attention_resolutions=(2, 4)
@@ -35,7 +35,7 @@ for epoch in range(epochs):
     total_loss = 0
     for batch in tqdm(dataloader, desc=f'Epoch {epoch + 1}/{epochs}'):
         voxel, _ = batch
-        voxel = voxel.to(device)
+        voxel = voxel[:, 3:, ...].to(device)
         optimizer.zero_grad()
 
         t = diffusion.sample_timesteps(voxel.shape[0])
@@ -58,5 +58,5 @@ for epoch in range(epochs):
     plt.show()
 
 # 保存模型
-torch.save(model.state_dict(), 'models/voxel_diffusion.pth')
+torch.save(model.state_dict(), 'models/voxel_diffusion_only_mask.pth')
 

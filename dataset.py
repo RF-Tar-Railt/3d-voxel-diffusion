@@ -65,7 +65,8 @@ def generate_sphere(voxel, cx, cy, cz, r, color_strategy):
     x_coords, y_coords, z_coords = coords[:, 0], coords[:, 1], coords[:, 2]
 
     colors = color_strategy.get_colors(x_coords, y_coords, z_coords)
-    voxel[x_coords, y_coords, z_coords] = colors
+    voxel[x_coords, y_coords, z_coords, :3] = colors
+    voxel[x_coords, y_coords, z_coords, 3] = 255
     return f"A sphere with radius {r}"
 
 
@@ -80,7 +81,8 @@ def generate_cuboid(voxel, x1, y1, z1, x2, y2, z2, color_strategy):
     z_coords = z_coords.flatten()
 
     colors = color_strategy.get_colors(x_coords, y_coords, z_coords)
-    voxel[x_coords, y_coords, z_coords] = colors
+    voxel[x_coords, y_coords, z_coords, :3] = colors
+    voxel[x_coords, y_coords, z_coords, 3] = 255
 
     if (z_max - z_min) == (y_max - y_min) == (x_max - x_min):
         return f"A cube with side length {x_max - x_min + 1}"
@@ -106,7 +108,8 @@ def generate_pyramid(voxel, cx, cy, cz, base_length, height, color_strategy):
         z = np.full_like(x, z)
 
         colors = color_strategy.get_colors(x, y, z)
-        voxel[x, y, z] = colors
+        voxel[x, y, z, :3] = colors
+        voxel[x, y, z, 3] = 255
 
     return f"A pyramid with base length {base_length}, height {height}"
 
@@ -125,7 +128,8 @@ def generate_cylinder(voxel, cx, cy, z1, z2, radius, color_strategy):
         z_coords = np.full_like(x_coords, z)
 
         colors = color_strategy.get_colors(x_coords, y_coords, z_coords)
-        voxel[x_coords, y_coords, z_coords] = colors
+        voxel[x_coords, y_coords, z_coords, :3] = colors
+        voxel[x_coords, y_coords, z_coords, 3] = 255
 
     return f"A cylinder with radius {radius}, height {z_end - z_start + 1}"
 
@@ -140,7 +144,7 @@ class DummyDataset(Dataset):
         return self.size
 
     def generate(self):
-        voxel = np.zeros((32, 32, 32, 3), dtype=np.uint8)
+        voxel = np.zeros((32, 32, 32, 4), dtype=np.uint8)
 
         shape_type = random.choice(self.shapes)
 
@@ -204,17 +208,10 @@ class DummyDataset(Dataset):
 
     def __getitem__(self, idx):
         voxel, shape = self.data[idx]
-        # grayscale
-        grey_voxel = (
-            0.2989 * voxel[..., 0].astype(np.float32) + 0.5870 * voxel[..., 1].astype(np.float32) + 0.1140 * voxel[..., 2].astype(np.float32)
-        )
-        grey_voxel = np.expand_dims(grey_voxel, axis=-1)
-        return (torch.from_numpy(grey_voxel).permute(3, 0, 1, 2).float() / 127.5 - 1.), self.shapes.index(shape)
-        # # only keep the binary information
-        # b_voxel = np.any(voxel != 0, axis=3).astype(np.uint8)
-        # return torch.from_numpy(b_voxel).float(), self.shapes.index(shape)
-        # # original data
-        # return (torch.from_numpy(voxel).permute(3, 0, 1, 2).float() / 127.5 - 1.), self.shapes.index(shape)
+        rgb = voxel[..., :3].astype(np.float32) / 127.5 - 1.
+        alpha = voxel[..., 3:4].astype(np.float32) / 255.
+        voxel_tensor = np.concatenate([rgb, alpha], axis=-1)
+        return torch.from_numpy(voxel_tensor).permute(3, 0, 1, 2).float(), self.shapes.index(shape)
 
 
 if __name__ == '__main__':
@@ -227,8 +224,10 @@ if __name__ == '__main__':
     for i in range(9):
         ax: Axes3D = fig.add_subplot(3, 3, i + 1, projection='3d')  # type: ignore
         voxel, shape = dataset.data[i]
-        b_voxel = np.any(voxel != 0, axis=3).astype(np.uint8)
-        ax.voxels(b_voxel, facecolors=voxel/255, edgecolor='k')
+        alpha_mask = voxel[..., 3] > 127
+        face_colors = voxel[..., :3] / 255
+        face_colors[~alpha_mask] = 0
+        ax.voxels(alpha_mask, facecolors=face_colors, edgecolor='k')
         ax.set_title(shape)
 
     plt.show()

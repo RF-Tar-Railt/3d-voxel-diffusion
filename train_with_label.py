@@ -1,13 +1,12 @@
 import torch
-from torch.nn.functional import mse_loss
 from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from D3D.dataset import DummyDataset
-from D3D.unet import VoxelUNet
-from D3D.diffusion import Diffusion
+from module.dataset import DummyDataset
+from module.unet import VoxelUNet
+from module.diffusion import Diffusion
 
 
 epochs = 10

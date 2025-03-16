@@ -1,7 +1,6 @@
-import numpy as np
 import torch
-from D3D.unet import VoxelUNet
-from D3D.diffusion import Diffusion
+from module.unet import VoxelUNet
+from module.diffusion import Diffusion
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 

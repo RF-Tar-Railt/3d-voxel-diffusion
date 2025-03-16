@@ -1,7 +1,6 @@
-import numpy as np
 import torch
-from D3D.unet import VoxelUNet
-from D3D.diffusion import Diffusion
+from module.unet import VoxelUNet
+from module.diffusion import Diffusion
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -24,7 +23,7 @@ diff = Diffusion(device)
 samples = diff.ddim_sample(model, batch_size=16, channels=1, size=SIZE, label=4)
 print(samples.shape)
 samples = samples.permute(0, 2, 3, 4, 1)
-voxels = (((samples[..., 0] + 1) * 0.5) > 0.8).cpu().numpy()
+voxels = (((samples[..., 0] + 1) * 0.5) > 0.9).cpu().numpy()
 #colors = ((samples[..., :3] + 1) * 127.5).clamp(0, 255).to(torch.uint8)
 #alphas = (((samples[..., 3] + 1) * 127.5).clamp(0, 255) > 200)
 #colors = colors.contiguous().cpu().numpy()

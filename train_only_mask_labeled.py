@@ -1,13 +1,12 @@
 import torch
-from torch.nn.functional import mse_loss
 from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from D3D.dataset import DummyDataset
-from D3D.unet import VoxelUNet
-from D3D.diffusion import Diffusion
+from module.dataset import DummyDataset
+from module.unet import VoxelUNet
+from module.diffusion import Diffusion
 
 
 epochs = 10
@@ -18,7 +17,7 @@ SIZE = 16
 
 # 使用虚拟数据集进行训练
 dataset = DummyDataset(size=40000, length=SIZE)
-dataloader = DataLoader(dataset, batch_size=8, shuffle=True, generator=torch.Generator(device=device))
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True, generator=torch.Generator(device=device))
 
 model = VoxelUNet(
     model_channels=SIZE,

@@ -57,16 +57,16 @@ def timestep_embedding(timesteps, dim, max_period=10000):
 
 
 class ResidualBlock(TimestepBlock):
-    def __init__(self, in_channels, out_channels, time_emb_dim, dropout):
+    def __init__(self, model_channel, in_channels, out_channels, time_emb_dim, dropout):
         super().__init__()
         self.conv1 = nn.Sequential(
-            nn.GroupNorm(32, in_channels),
+            nn.GroupNorm(model_channel, in_channels),
             nn.SiLU(),
             nn.Conv3d(in_channels, out_channels, 3, padding=1, bias=False)
         )
 
         self.conv2 = nn.Sequential(
-            nn.GroupNorm(32, out_channels),
+            nn.GroupNorm(model_channel, out_channels),
             nn.SiLU(),
             nn.Dropout(dropout),
             nn.Conv3d(out_channels, out_channels, 3, padding=1, bias=False)
@@ -89,10 +89,10 @@ class ResidualBlock(TimestepBlock):
 
 
 class AttentionBlock(nn.Module):
-    def __init__(self, channels, num_heads=1):
+    def __init__(self, model_channel, channels, num_heads=1):
         super().__init__()
         self.num_heads = num_heads
-        self.norm = nn.GroupNorm(min(32, channels), channels)
+        self.norm = nn.GroupNorm(model_channel, channels)
         self.qkv = nn.Conv3d(channels, channels * 3, 1, bias=False)
         self.proj = nn.Conv3d(channels, channels, 1)
 
@@ -155,83 +155,89 @@ class VoxelUNet(nn.Module):
         self.label_embed = nn.Embedding(num_classes, time_emb_dim)
         self.init_conv = nn.Conv3d(in_channels, model_channels, 3, padding=1)
         # 编码器
-        self.encoder = nn.ModuleList([
-            TimestepEmbedSequential(
-                ResidualBlock(model_channels, model_channels, time_emb_dim, dropout),
-                ResidualBlock(model_channels, model_channels, time_emb_dim, dropout),
-                nn.Conv3d(model_channels, model_channels, 3, stride=(1, 2, 2), padding=1),
-            ),
-            TimestepEmbedSequential(
-                ResidualBlock(model_channels, model_channels * 2, time_emb_dim, dropout),
-                ResidualBlock(model_channels * 2, model_channels * 2, time_emb_dim, dropout),
-                AttentionBlock(model_channels * 2),
-                nn.Conv3d(model_channels * 2, model_channels * 2, 3, stride=(1, 2, 2), padding=1),
-            ),
-            TimestepEmbedSequential(
-                ResidualBlock(model_channels * 2, model_channels * 4, time_emb_dim, dropout),
-                ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
-                AttentionBlock(model_channels * 4),
-            )
-        ])
-        # input_block_channels = [model_channels]
-        # ch = model_channels
-        # ds = 1
-        #
-        # for level, mult in enumerate(channel_mult):
-        #     for _ in range(num_res_blocks):
-        #         layers: list = [ResidualBlock(ch, mult * model_channels, time_emb_dim, dropout)]
-        #         ch = mult * model_channels
-        #         if ds in attention_resolutions:
-        #             layers.append(AttentionBlock(ch))
-        #         self.encoder.append(TimestepEmbedSequential(*layers))
-        #         input_block_channels.append(ch)
-        #     if level != len(channel_mult) - 1:
-        #         #self.encoder.append(TimestepEmbedSequential(nn.MaxPool3d(2)))
-        #         self.encoder[-1].append(
-        #             TimestepEmbedSequential(nn.Conv3d(ch, ch, 3, stride=(1, 2, 2), padding=1))
-        #         )
-        #         input_block_channels.append(ch)
-        #         ds *= 2
+        # self.encoder = nn.ModuleList([
+        #     TimestepEmbedSequential(
+        #         ResidualBlock(model_channels, model_channels, time_emb_dim, dropout),
+        #         ResidualBlock(model_channels, model_channels, time_emb_dim, dropout),
+        #         nn.Conv3d(model_channels, model_channels, 3, stride=(1, 2, 2), padding=1),
+        #     ),
+        #     TimestepEmbedSequential(
+        #         ResidualBlock(model_channels, model_channels * 2, time_emb_dim, dropout),
+        #         ResidualBlock(model_channels * 2, model_channels * 2, time_emb_dim, dropout),
+        #         AttentionBlock(model_channels * 2),
+        #         nn.Conv3d(model_channels * 2, model_channels * 2, 3, stride=(1, 2, 2), padding=1),
+        #     ),
+        #     TimestepEmbedSequential(
+        #         ResidualBlock(model_channels * 2, model_channels * 4, time_emb_dim, dropout),
+        #         ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
+        #         AttentionBlock(model_channels * 4),
+        #     )
+        # ])
+        input_block_channels = [model_channels]
+        ch = model_channels
+        ds = 1
+        self.encoder = nn.ModuleList([])
 
+        for level, mult in enumerate(channel_mult):
+            for _ in range(num_res_blocks):
+                layers: list = [ResidualBlock(model_channels, ch, mult * model_channels, time_emb_dim, dropout)]
+                ch = mult * model_channels
+                if ds in attention_resolutions:
+                    layers.append(AttentionBlock(model_channels, ch))
+                self.encoder.append(TimestepEmbedSequential(*layers))
+                input_block_channels.append(ch)
+            if level != len(channel_mult) - 1:
+                #self.encoder.append(TimestepEmbedSequential(nn.MaxPool3d(2)))
+                self.encoder.append(
+                    TimestepEmbedSequential(nn.Conv3d(ch, ch, 3, stride=(1, 2, 2), padding=1))
+                )
+                input_block_channels.append(ch)
+                ds *= 2
+
+        # self.middle = TimestepEmbedSequential(
+        #     ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
+        #     AttentionBlock(model_channels * 4),
+        #     ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
+        # )
         self.middle = TimestepEmbedSequential(
-            ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
-            AttentionBlock(model_channels * 4),
-            ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
+            ResidualBlock(model_channels, ch, ch, time_emb_dim, dropout),
+            AttentionBlock(model_channels, ch),
+            ResidualBlock(model_channels, ch, ch, time_emb_dim, dropout),
         )
 
         # 解码器
-        self.decoder = nn.ModuleList([
-            TimestepEmbedSequential(
-                ResidualBlock(model_channels * (4 + 4), model_channels * 4, time_emb_dim, dropout),
-                ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
-                AttentionBlock(model_channels * 4),
-
-            ),
-            TimestepEmbedSequential(
-                ResidualBlock(model_channels * (4 + 2), model_channels * 2, time_emb_dim, dropout),
-                ResidualBlock(model_channels * 2, model_channels * 2, time_emb_dim, dropout),
-                AttentionBlock(model_channels * 2),
-                Upsample(model_channels * 2),
-            ),
-            TimestepEmbedSequential(
-                ResidualBlock(model_channels * (2 + 1), model_channels, time_emb_dim, dropout),
-                Upsample(model_channels * 1),
-            )
-        ])
-
-        # for level, mult in list(enumerate(channel_mult))[::-1]:
-        #     for i in range(num_res_blocks + 1):
-        #         layers = [ResidualBlock(ch + input_block_channels.pop(), mult * model_channels, time_emb_dim, dropout)]
-        #         ch = mult * model_channels
-        #         if ds in attention_resolutions:
-        #             layers.append(AttentionBlock(ch))
-        #         if level and i == num_res_blocks:
-        #             layers.append(Upsample(ch))
-        #             ds //= 2
-        #         self.decoder.append(TimestepEmbedSequential(*layers))
+        # self.decoder = nn.ModuleList([
+        #     TimestepEmbedSequential(
+        #         ResidualBlock(model_channels * (4 + 4), model_channels * 4, time_emb_dim, dropout),
+        #         ResidualBlock(model_channels * 4, model_channels * 4, time_emb_dim, dropout),
+        #         AttentionBlock(model_channels * 4),
+        #
+        #     ),
+        #     TimestepEmbedSequential(
+        #         ResidualBlock(model_channels * (4 + 2), model_channels * 2, time_emb_dim, dropout),
+        #         ResidualBlock(model_channels * 2, model_channels * 2, time_emb_dim, dropout),
+        #         AttentionBlock(model_channels * 2),
+        #         Upsample(model_channels * 2),
+        #     ),
+        #     TimestepEmbedSequential(
+        #         ResidualBlock(model_channels * (2 + 1), model_channels, time_emb_dim, dropout),
+        #         Upsample(model_channels * 1),
+        #     )
+        # ])
+        self.decoder = nn.ModuleList([])
+        for level, mult in list(enumerate(channel_mult))[::-1]:
+            for i in range(num_res_blocks + 1):
+                layers = [ResidualBlock(model_channels, ch + input_block_channels.pop(), mult * model_channels, time_emb_dim, dropout)]
+                ch = mult * model_channels
+                if ds in attention_resolutions:
+                    layers.append(AttentionBlock(model_channels, ch))
+                if level and i == num_res_blocks:
+                    layers.append(Upsample(ch))
+                    ds //= 2
+                self.decoder.append(TimestepEmbedSequential(*layers))
 
         self.final_conv = nn.Sequential(
-            nn.GroupNorm(32, model_channels),
+            nn.GroupNorm(model_channels, model_channels),
             nn.SiLU(),
             nn.Conv3d(model_channels, out_channels, 3, padding=1),
         )
@@ -243,7 +249,6 @@ class VoxelUNet(nn.Module):
     #     return torch.cat([pos_enc.sin(), pos_enc.cos()], dim=-1)
 
     def forward(self, x, t, y=None):
-        hs = []
         emb = self.time_embed(timestep_embedding(t, self.model_channels))
         if y is not None:
             if isinstance(y, int):
@@ -251,6 +256,7 @@ class VoxelUNet(nn.Module):
             emb = emb + self.label_embed(y)
         h = x
         h = self.init_conv(h)
+        hs = [h]
         for mod in self.encoder:
             h = mod(h, emb)
             hs.append(h)

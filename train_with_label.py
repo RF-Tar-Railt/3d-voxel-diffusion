@@ -13,30 +13,24 @@ from D3D.diffusion import Diffusion
 epochs = 10
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.set_default_device(device)
-model = VoxelUNet(
-    in_channels=4,
-    out_channels=4,
-    channel_mult=(1, 2, 2),
-    num_res_blocks=1,
-    attention_resolutions=(2, 4)
-).to(device)
+SIZE = 16
 
 # 使用虚拟数据集进行训练
-dataset = DummyDataset(size=1000)
+dataset = DummyDataset(size=4000, length=SIZE)
 dataloader = DataLoader(dataset, batch_size=1, shuffle=True, generator=torch.Generator(device=device))
 
+model = VoxelUNet(
+    model_channels=SIZE,
+    in_channels=4,
+    out_channels=8,
+    channel_mult=(1, 2, 4),
+    num_res_blocks=2,
+    num_classes=dataset.num_classes,
+    attention_resolutions=(2, 4)
+).to(device)
 optimizer = AdamW(model.parameters(), lr=1e-4)
 diffusion = Diffusion(device)
 loss_history = []
-
-
-def train_losses(diff, model, x_start, t, label=None):
-    noise = torch.randn_like(x_start).to(diff.device)
-    x_t = diff.q_sample(x_start, t, noise)
-    pred_noise = model(x_t, t, label)
-    loss_rgb = mse_loss(pred_noise[:, :3], noise[:, :3])
-    loss_alpha = mse_loss(pred_noise[:, 3], noise[:, 3]) * 0.1
-    return loss_rgb + loss_alpha
 
 
 for epoch in range(epochs):
@@ -48,7 +42,7 @@ for epoch in range(epochs):
         optimizer.zero_grad()
 
         t = diffusion.sample_timesteps(voxel.shape[0])
-        loss = train_losses(diffusion, model, voxel, t, label)
+        loss = diffusion.train_losses(model, voxel, t, label)
         loss.backward()
         optimizer.step()
 
@@ -67,5 +61,5 @@ for epoch in range(epochs):
     plt.show()
 
 # 保存模型
-torch.save(model.state_dict(), 'models/voxel_diffusion_labeled.pth')
+torch.save(model.state_dict(), f'models/voxel_diffusion_{SIZE}_3_labeled.pth')
 

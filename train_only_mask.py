@@ -13,17 +13,21 @@ from D3D.diffusion import Diffusion
 epochs = 10
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.set_default_device(device)
-model = VoxelUNet(
-    in_channels=1,
-    out_channels=2,
-    channel_mult=(1, 2, 2),
-    num_res_blocks=1,
-    attention_resolutions=(2, 4)
-).to(device)
+SIZE = 16
 
 # 使用虚拟数据集进行训练
-dataset = DummyDataset(size=4000)
+dataset = DummyDataset(size=4000, length=SIZE)
 dataloader = DataLoader(dataset, batch_size=1, shuffle=True, generator=torch.Generator(device=device))
+
+model = VoxelUNet(
+    model_channels=SIZE,
+    in_channels=1,
+    out_channels=2,
+    channel_mult=(1, 2, 4),
+    num_res_blocks=2,
+    num_classes=dataset.num_classes,
+    attention_resolutions=(2, 4)
+).to(device)
 
 optimizer = AdamW(model.parameters(), lr=1e-4)
 diffusion = Diffusion(device)
@@ -58,5 +62,5 @@ for epoch in range(epochs):
     plt.show()
 
 # 保存模型
-torch.save(model.state_dict(), 'models/voxel_diffusion_only_mask.pth')
+torch.save(model.state_dict(), f'models/voxel_diffusion_{SIZE}_3_only_mask.pth')
 

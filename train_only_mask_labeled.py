@@ -15,17 +15,18 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.set_default_device(device)
 SIZE = 16
 
+
 # 使用虚拟数据集进行训练
-dataset = DummyDataset(size=4000, length=SIZE)
-dataloader = DataLoader(dataset, batch_size=4, shuffle=True, generator=torch.Generator(device=device))
+dataset = DummyDataset(size=40000, length=SIZE)
+dataloader = DataLoader(dataset, batch_size=8, shuffle=True, generator=torch.Generator(device=device))
 
 model = VoxelUNet(
     model_channels=SIZE,
-    in_channels=4,
-    out_channels=8,
+    in_channels=1,
+    out_channels=2,
     channel_mult=(1, 2, 4),
-    num_classes=dataset.num_classes,
     num_res_blocks=2,
+    num_classes=dataset.num_classes,
     attention_resolutions=(2, 4)
 ).to(device)
 
@@ -38,12 +39,12 @@ for epoch in range(epochs):
     model.train()
     total_loss = 0
     for batch in tqdm(dataloader, desc=f'Epoch {epoch + 1}/{epochs}'):
-        voxel, _ = batch
-        voxel = voxel.to(device)
+        voxel, label = batch
+        voxel = voxel[:, 3:, ...].to(device)
         optimizer.zero_grad()
 
         t = diffusion.sample_timesteps(voxel.shape[0])
-        loss = diffusion.train_losses(model, voxel, t)
+        loss = diffusion.train_losses(model, voxel, t, label)
         loss.backward()
         optimizer.step()
 
@@ -62,5 +63,5 @@ for epoch in range(epochs):
     plt.show()
 
 # 保存模型
-torch.save(model.state_dict(), f'models/voxel_diffusion_{SIZE}_3.pth')
+torch.save(model.state_dict(), f'models/voxel_diffusion_{SIZE}_3_only_mask_labeled.pth')
 

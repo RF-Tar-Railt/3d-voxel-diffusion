@@ -214,12 +214,12 @@ def generate_table(voxel, color_strategy):
     return "Table"
 
 
-def generate_chair(voxel, color_strategy):
+def generate_chair(voxel, color_strategy, side_lean=False):
     size = voxel.shape[0]
 
     # 随机参数（与桌子使用相同参数名）
     seat_size = random.randint(4, 8)
-    backrest_height = random.randint(3, 6)
+    backrest_height = random.randint(3, 8)
     leg_size = random.choice([1, 2])  # 与桌子相同的腿尺寸选项
     seat_height = random.randint(size // 4, size // 2)
     leg_offset = random.randint(0, 1)  # 使用与桌子相似的偏移参数
@@ -234,19 +234,16 @@ def generate_chair(voxel, color_strategy):
                     cx + seat_size // 2, cy + seat_size // 2, seat_height + 1,
                     color_strategy)
 
-    # 统一靠背生成逻辑
-    backrest_dir = random.choice(["back", "side"])
-    if backrest_dir == "back":
-        generate_cuboid(voxel,
-                        cx - seat_size // 2, cy + seat_size // 2 + 1, seat_height,
-                        cx + seat_size // 2, cy + seat_size // 2 + 2, seat_height + backrest_height,
-                        color_strategy)
-    else:
+    if side_lean:
         generate_cuboid(voxel,
                         cx + seat_size // 2 + 1, cy - seat_size // 2, seat_height,
                         cx + seat_size // 2 + 2, cy + seat_size // 2, seat_height + backrest_height,
                         color_strategy)
-
+    else:
+        generate_cuboid(voxel,
+                        cx - seat_size // 2, cy + seat_size // 2 + 1, seat_height,
+                        cx + seat_size // 2, cy + seat_size // 2 + 2, seat_height + backrest_height,
+                        color_strategy)
     # 统一腿部生成逻辑（与桌子相同结构）
     leg_z_end = seat_height - 1
     leg_positions = [
@@ -269,14 +266,32 @@ class DummyDataset(Dataset):
     def __init__(self, size=1000, length=32):
         self.size = size
         self.voxel_size = length
-        self.shapes = ['sphere', 'cuboid', 'pyramid', 'cylinder', 'table', 'chair', 'hollow_sphere', 'hollow_cuboid']
-        self.num_classes = 6
-        self.data = list(itertools.islice(map(self.generate, itertools.cycle(self.shapes)), size))
+        self.shapes = {
+            "sphere": 1,
+            "cuboid": 1,
+            "pyramid": 2,
+            "cylinder": 1,
+            "hollow_sphere": 1,
+            "hollow_cuboid": 1,
+            "table": 2,
+            "chair_back": 1,
+            "chair_side": 1
+        }
+        self.shape_index = {shape: i for i, shape in enumerate(self.shapes)}
+        self.num_classes = len(self.shapes)
+        self.data = []
+
+    def generate(self, select_shape=None):
+        if select_shape and select_shape in self.shapes:
+            self.data = [self._generate(select_shape) for _ in range(self.size)]
+        else:
+            shapes = [shape for shape, count in self.shapes.items() for _ in range(count)]
+            self.data = list(itertools.islice(map(self._generate, itertools.cycle(shapes)), self.size))
 
     def __len__(self):
         return self.size
 
-    def generate(self, shape_type: str):
+    def _generate(self, shape_type: str):
         size = self.voxel_size
         voxel = np.zeros((size, size, size, 4), dtype=np.uint8)
 
@@ -288,7 +303,7 @@ class DummyDataset(Dataset):
 
             strategy = generate_color_strategy(cz-r, cz+r)
             generate_sphere(voxel, cx, cy, cz, r, strategy, shape_type.startswith('hollow'))
-            return voxel, shape_type.split('_')[-1]
+            return voxel, shape_type
 
         elif shape_type in ["cuboid", "hollow_cuboid"]:
             max_dim = size // 2
@@ -299,7 +314,7 @@ class DummyDataset(Dataset):
 
             strategy = generate_color_strategy(z1, z2)
             generate_cuboid(voxel, x1, y1, z1, x2, y2, z2, strategy, shape_type.startswith('hollow'))
-            return voxel, shape_type.split('_')[-1]
+            return voxel, shape_type
 
         elif shape_type == 'pyramid':
             cx = random.randint(int(0.25 * size), int(0.75 * size))
@@ -328,7 +343,7 @@ class DummyDataset(Dataset):
             return voxel, shape_type
         else:
             strategy = generate_color_strategy(size//2-3, size//2+3)
-            generate_chair(voxel, strategy)
+            generate_chair(voxel, strategy, side_lean=shape_type == 'chair_side')
             return voxel, shape_type
 
     def __getitem__(self, idx):
@@ -336,7 +351,7 @@ class DummyDataset(Dataset):
         rgb = voxel[..., :3].astype(np.float32) / 127.5 - 1.
         alpha = voxel[..., 3:4].astype(np.float32) / 255.
         voxel_tensor = np.concatenate([rgb, alpha], axis=-1)
-        return torch.from_numpy(voxel_tensor).permute(3, 0, 1, 2).float(), self.shapes.index(shape)
+        return torch.from_numpy(voxel_tensor).permute(3, 0, 1, 2).float(), self.shape_index[shape]
 
 
 if __name__ == '__main__':

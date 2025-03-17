@@ -1,8 +1,10 @@
 import torch
-from module.unet import VoxelUNet
-from module.diffusion import Diffusion
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+from module.unet import VoxelUNet
+from module.diffusion import Diffusion
+from module.dataset import DummyDataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 SIZE = 16
@@ -12,7 +14,7 @@ model = VoxelUNet(
     out_channels=2,
     channel_mult=(1, 2, 4),
     num_res_blocks=2,
-    num_classes=6,
+    num_classes=DummyDataset().num_classes,
     attention_resolutions=(2, 4)
 ).to(device)
 model.load_state_dict(torch.load(f'models/voxel_diffusion_{SIZE}_3_only_mask_labeled.pth'))
@@ -20,7 +22,7 @@ model.eval()
 
 diff = Diffusion(device)
 
-samples = diff.ddim_sample(model, batch_size=16, channels=1, size=SIZE, label=3)
+samples = diff.ddim_sample(model, batch_size=16, channels=1, size=SIZE, label=2)
 print(samples.shape)
 samples = samples.permute(0, 2, 3, 4, 1)
 voxels = (((samples[..., 0] + 1) * 0.5) > 0.9).cpu().numpy()

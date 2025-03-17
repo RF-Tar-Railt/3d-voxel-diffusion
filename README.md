@@ -9,10 +9,13 @@ This is an implementation of the 3D Voxel Diffusion model for 3D object generati
 In size 16^3 and only 1 layer (Alpha channel), the model can generate some simple 3D objects:
 
 ### Sphere
-![shpere](./results/only_mask/sphere_2_size4000+batch4.png)
+![shpere](./results/only_mask/16/sphere_2_size4000+batch4.png)
 
 ### Cylinder
-![cylinder](./results/only_mask/cylinder_1_size4000+batch4.png)
+![cylinder](./results/only_mask/16/cylinder_1_size4000+batch4.png)
 
 ### Table
-![table](./results/only_mask/table_1_size40000+batch1.png)
+![table](./results/only_mask/16/table_1_size40000+batch1.png)
+
+### Chair
+![chair](./results/only_mask/16/chair_1_size80000+batch4.png)

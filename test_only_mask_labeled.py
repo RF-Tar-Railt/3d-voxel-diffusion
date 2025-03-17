@@ -20,7 +20,7 @@ model.eval()
 
 diff = Diffusion(device)
 
-samples = diff.ddim_sample(model, batch_size=16, channels=1, size=SIZE, label=4)
+samples = diff.ddim_sample(model, batch_size=16, channels=1, size=SIZE, label=3)
 print(samples.shape)
 samples = samples.permute(0, 2, 3, 4, 1)
 voxels = (((samples[..., 0] + 1) * 0.5) > 0.9).cpu().numpy()

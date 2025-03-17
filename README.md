@@ -15,4 +15,4 @@ In size 16^3 and only 1 layer (Alpha channel), the model can generate some simpl
 ![cylinder](./results/only_mask/cylinder_1_size4000+batch4.png)
 
 ### Table
-![table](./results/only_mask/table_1_size4000+batch4.png)
+![table](./results/only_mask/table_1_size40000+batch1.png)

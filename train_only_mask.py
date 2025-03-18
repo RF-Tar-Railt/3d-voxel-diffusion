@@ -16,7 +16,6 @@ SIZE = 16
 
 # 使用虚拟数据集进行训练
 dataset = DummyDataset(size=4000, length=SIZE)
-dataset.generate()
 dataloader = DataLoader(dataset, batch_size=1, shuffle=True, generator=torch.Generator(device=device))
 
 model = VoxelUNet(

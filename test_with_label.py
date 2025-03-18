@@ -23,16 +23,16 @@ model.eval()
 
 diff = Diffusion(device)
 
-samples = diff.sample(model, batch_size=4, channels=4, label=2)
+samples = diff.ddim_sample(model, batch_size=16, size=SIZE, channels=4, label=6)
 print(samples.shape)
 samples = samples.permute(0, 2, 3, 4, 1)
 colors = ((samples[..., :3] + 1) * 127.5).clamp(0, 255).to(torch.uint8)
-alphas = ((samples[..., 3] + 1).clamp(0, 2) > 1.5).float()
+alphas = (((samples[..., 0] + 1) * 0.5) > 0.9)
 colors = colors.contiguous().cpu().numpy()
 masks = alphas.contiguous().cpu().numpy()
 fig = plt.figure(figsize=(10, 10))
-for i in range(4):
-    ax: Axes3D = fig.add_subplot(2, 2, i + 1, projection='3d')  # type: ignore
+for i in range(16):
+    ax: Axes3D = fig.add_subplot(4, 4, i + 1, projection='3d')  # type: ignore
     ax.voxels(masks[i], facecolors=colors[i] / 255, edgecolor='k')
     ax.set_xlim([0, SIZE])
     ax.set_ylim([0, SIZE])

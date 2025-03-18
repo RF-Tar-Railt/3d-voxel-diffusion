@@ -279,14 +279,11 @@ class DummyDataset(Dataset):
         }
         self.shape_index = {shape: i for i, shape in enumerate(self.shapes)}
         self.num_classes = len(self.shapes)
-        self.data = []
+        shapes = [shape for shape, count in self.shapes.items() for _ in range(count)]
+        self._slots = list(itertools.islice(itertools.cycle(shapes), self.size))
 
-    def generate(self, select_shape=None):
-        if select_shape and select_shape in self.shapes:
-            self.data = [self._generate(select_shape) for _ in range(self.size)]
-        else:
-            shapes = [shape for shape, count in self.shapes.items() for _ in range(count)]
-            self.data = list(itertools.islice(map(self._generate, itertools.cycle(shapes)), self.size))
+    def get_data(self, idx):
+        return self._generate(self._slots[idx])
 
     def __len__(self):
         return self.size
@@ -347,7 +344,7 @@ class DummyDataset(Dataset):
             return voxel, shape_type
 
     def __getitem__(self, idx):
-        voxel, shape = self.data[idx]
+        voxel, shape = self._generate(self._slots[idx])
         rgb = voxel[..., :3].astype(np.float32) / 127.5 - 1.
         alpha = voxel[..., 3:4].astype(np.float32) / 255.
         voxel_tensor = np.concatenate([rgb, alpha], axis=-1)
@@ -363,7 +360,7 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(10, 10))
     for i in range(9):
         ax: Axes3D = fig.add_subplot(3, 3, i + 1, projection='3d')  # type: ignore
-        voxel, shape = dataset.data[i]
+        voxel, shape = dataset.get_data(i)
         alpha_mask = voxel[..., 3] > 127
         face_colors = voxel[..., :3] / 255
         face_colors[~alpha_mask] = 0

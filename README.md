@@ -8,6 +8,8 @@ This is an implementation of the 3D Voxel Diffusion model for 3D object generati
 
 In size 16^3 and only 1 layer (Alpha channel), the model can generate some simple 3D objects:
 
+~~My computer is too slow to train the model with size 32^3.~~
+
 ### Sphere
 ![shpere](./results/only_mask/16/sphere_2_size4000+batch4.png)
 

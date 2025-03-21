@@ -20,7 +20,7 @@ In size 16^3 and only 1 layer (Alpha channel), the model can generate some simpl
 ![table](./results/only_mask/16/table_1_size40000+batch1.png)
 
 ### Chair
-![chair](./results/only_mask/16/chair_1_size80000+batch4.png
+![chair](./results/only_mask/16/chair_1_size80000+batch4.png)
 
 ### Usage
 

@@ -1,36 +1,11 @@
 import math
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.functional import interpolate
 
 
-# class TextEncoder(nn.Module):
-#     def __init__(self, embed_dim=256):
-#         super().__init__()
-#         self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
-#         self.clip = CLIPTextModel.from_pretrained("openai/clip-vit-base-patch32")
-#         self.proj = nn.Linear(512, embed_dim)  # CLIP输出512维 → 目标维度
-#         self.clip.requires_grad_(False)  # 冻结CLIP参数，仅训练投影层
-#
-#     def forward(self, text):
-#         inputs = self.tokenizer(text, return_tensors='pt', padding=True, truncation=True).to(self.clip.device)
-#         outputs = self.clip(**inputs)
-#         return self.proj(outputs.last_hidden_state.mean(dim=1))
-
-class TimestepBlock(nn.Module):
-    """
-    Any module where forward() takes timestep embeddings as a second argument.
-    """
-
-    def forward(self, input, t_emb=None):
-        """
-        Apply the module to `x` given `emb` timestep embeddings.
-        """
-
-
-class TimestepEmbedSequential(nn.Sequential, TimestepBlock):  # type: ignore
+class TimestepEmbedSequential(nn.Sequential):
     """
     A sequential module that passes timestep embeddings to the children that
     support it as an extra input.
@@ -39,7 +14,7 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):  # type: ignore
     def forward(self, input, t_emb=None):
         x = input
         for layer in self:
-            if isinstance(layer, TimestepBlock) and t_emb is not None:
+            if isinstance(layer, ResidualBlock) and t_emb is not None:
                 x = layer(x, t_emb)
             else:
                 x = layer(x)
@@ -56,7 +31,7 @@ def timestep_embedding(timesteps, dim, max_period=10000):
     return emb
 
 
-class ResidualBlock(TimestepBlock):
+class ResidualBlock(nn.Module):
     def __init__(self, model_channel, in_channels, out_channels, time_emb_dim, dropout):
         super().__init__()
         self.conv1 = nn.Sequential(
@@ -242,11 +217,6 @@ class VoxelUNet(nn.Module):
             nn.Conv3d(model_channels, out_channels, 3, padding=1),
         )
 
-    #
-    # def positional_encoding(self, t):
-    #     inv_freq = 1.0 / (10000 ** (torch.arange(0, 256, 2).float().to(t.device) / 256))
-    #     pos_enc = torch.einsum('i,j->ij', t.float(), inv_freq)
-    #     return torch.cat([pos_enc.sin(), pos_enc.cos()], dim=-1)
 
     def forward(self, x, t, y=None):
         emb = self.time_embed(timestep_embedding(t, self.model_channels))

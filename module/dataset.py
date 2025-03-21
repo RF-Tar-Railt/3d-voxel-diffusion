@@ -263,9 +263,9 @@ def generate_chair(voxel, color_strategy, side_lean=False):
 
 
 class DummyDataset(Dataset):
-    def __init__(self, size=1000, length=32):
-        self.size = size
-        self.voxel_size = length
+    def __init__(self, length=1000, size=32):
+        self.size = length
+        self.voxel_size = size
         self.shapes = {
             "sphere": 1,
             "cuboid": 1,

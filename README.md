@@ -20,4 +20,18 @@ In size 16^3 and only 1 layer (Alpha channel), the model can generate some simpl
 ![table](./results/only_mask/16/table_1_size40000+batch1.png)
 
 ### Chair
-![chair](./results/only_mask/16/chair_1_size80000+batch4.png)
+![chair](./results/only_mask/16/chair_1_size80000+batch4.png
+
+### Usage
+
+**Train the model**
+
+```bash
+python train.py --size 16 --batch 4 --epoch 10 --length 40000 --only-mask --with-label
+```
+
+**Sample the model**
+
+```bash
+python sample.py .\models\voxel_diffusion_16_3_only_mask_labeled.pth --label sphere --batch 16
+```

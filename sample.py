@@ -58,10 +58,11 @@ if __name__ == '__main__':
     samples = diff.ddim_sample(model, batch_size=args.batch_size, channels=1 if only_mask else 4, size=SIZE, label=label)
     print(samples.shape)
     samples = samples.permute(0, 2, 3, 4, 1)
-    voxels = (((samples[..., 0] + 1) * 0.5) > args.alpha).contiguous().cpu().numpy()
     if only_mask:
+        voxels = (((samples[..., 0] + 1) * 0.5) > args.alpha).contiguous().cpu().numpy()
         colors = np.array([])
     else:
+        voxels = (((samples[..., 3] + 1) * 0.5) > args.alpha).contiguous().cpu().numpy()
         colors = ((samples[..., :3] + 1) * 127.5).clamp(0, 255).to(torch.uint8).contiguous().cpu().numpy()
     fig = plt.figure(figsize=(10, 10))
     for i in range(args.batch_size):

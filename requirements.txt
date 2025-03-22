@@ -1,0 +1,7 @@
+torch
+numpy<2
+matplotlib
+mpld3
+gradio
+tqdm
+open3d

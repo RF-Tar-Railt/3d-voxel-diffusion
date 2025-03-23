@@ -23,7 +23,8 @@ def get_args():
     parser.add_argument('--label', type=str, default=None, help='Label for sampling', choices=list(dataset.shapes.keys()))
     parser.add_argument('--only-mask', action='store_true', help='Sample only mask', default=False, dest='only_mask')
     parser.add_argument('--alpha', type=float, default=0.9, help='Alpha value for mask')
-
+    parser.add_argument('--schedule', choices=['linear', 'cosine'], default='linear', help='Diffusion Beta schedule')
+    parser.add_argument('--timesteps', type=int, default=1000, help='Number of timesteps for diffusion')
     return parser.parse_args()
 
 
@@ -53,7 +54,7 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(args.model, weights_only=True))
     model.eval()
 
-    diff = Diffusion(device)
+    diff = Diffusion(device, args.schedule, args.timesteps)
 
     samples = diff.ddim_sample(model, batch_size=args.batch_size, channels=1 if only_mask else 4, size=SIZE, label=label)
     print(samples.shape)

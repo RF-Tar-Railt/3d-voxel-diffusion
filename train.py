@@ -21,6 +21,8 @@ def get_args():
     parser.add_argument('--only-mask', action='store_true', help='Train only with mask', default=False, dest='only_mask')
     parser.add_argument('--with-label', action='store_true', help='Train with label', default=True, dest='with_label')
     parser.add_argument('--out-dir', type=str, default='models', help='Output directory for saving models')
+    parser.add_argument('--schedule', choices=['linear', 'cosine'], default='linear', help='Diffusion Beta schedule')
+    parser.add_argument('--timesteps', type=int, default=1000, help='Number of timesteps for diffusion')
     return parser.parse_args()
 
 
@@ -46,7 +48,7 @@ if __name__ == '__main__':
         attention_resolutions=(2, 4)
     ).to(device)
     optimizer = AdamW(model.parameters(), lr=args.lr)
-    diffusion = Diffusion(device)
+    diffusion = Diffusion(device, args.schedule, args.timesteps)
     loss_history = []
 
     for epoch in range(epochs):

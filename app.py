@@ -1,5 +1,8 @@
 import math
 import re
+import threading
+from datetime import datetime
+from pathlib import Path
 
 import gradio as gr
 import matplotlib.pyplot as plt
@@ -16,6 +19,7 @@ from module.diffusion import Diffusion
 
 
 dummy = DummyDataset()
+stop_training_event = threading.Event()
 
 
 def voxels_to_mesh(
@@ -60,6 +64,8 @@ def voxels_to_mesh(
 
 # 训练功能封装
 def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, schedule, timestep, progress=gr.Progress(track_tqdm=True)):
+    global stop_training_event
+    stop_training_event.clear()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.set_default_device(device)
     epochs = int(epoch)
@@ -83,10 +89,16 @@ def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, sche
     diffusion = Diffusion(device, schedule, timestep)
     loss_history = []
 
+    print(f"Start training at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
     for epoch in range(epochs):
+        if stop_training_event.is_set():
+            break
         model.train()
         total_loss = 0
         for batch in tqdm(dataloader, desc=f'Epoch {epoch + 1}/{epochs}'):
+            if stop_training_event.is_set():
+                break
             voxel, label = batch
             if only_mask:
                 voxel = voxel[:, 3:, ...].to(device)
@@ -126,9 +138,17 @@ def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, sche
     yield "results/loss_curve.png", f'models/{model_name}.pth'
 
 
+def scan_model_files():
+    model_dir = "./models"
+    if not Path(model_dir).exists():
+        return []
+    files = [file.as_posix() for file in Path(model_dir).iterdir() if file.is_file() and file.suffix == ".pth"]
+    return files
+
+
 def update_gen_only_mask(model_file, only_mask, size):
     if model_file is None:
-        return only_mask, size
+        return only_mask, size, gr.Dropdown(choices=scan_model_files())
     if "only_mask" in model_file:
         only_mask = True
     else:
@@ -136,7 +156,7 @@ def update_gen_only_mask(model_file, only_mask, size):
     mat = re.search(r"_(\d+)_3", model_file)
     if mat is not None:
         size = int(mat.group(1))
-    return only_mask, gr.Dropdown(value=size)
+    return only_mask, gr.Dropdown(value=size), gr.Dropdown(choices=scan_model_files())
 
 
 # 生成样本功能封装
@@ -201,13 +221,14 @@ with gr.Blocks(title="3D Voxel Diffusion") as app:
                     train_lr = gr.Number(label="学习率", value=1e-4)
                     train_schedule = gr.Dropdown(["linear", "cosine"], label="扩散Beta调度", value="linear")
                     train_timesteps = gr.Number(label="扩散时间步数", value=1000)
-                    train_only_mask = gr.Checkbox(label="仅训练掩码")
-                    train_with_label = gr.Checkbox(label="使用标签", value=True)
-                    train_btn = gr.Button("开始训练")
 
                 with gr.Column():
                     loss_plot = gr.Image(label="损失曲线")
                     model_output = gr.File(label="输出模型")
+                    train_only_mask = gr.Checkbox(label="仅训练掩码")
+                    train_with_label = gr.Checkbox(label="使用标签", value=True)
+                    train_btn = gr.Button("开始训练", interactive=True)
+                    stop_train_btn = gr.Button("停止训练", interactive=False)
 
         with gr.TabItem("生成"):
             with gr.Column():
@@ -217,21 +238,38 @@ with gr.Blocks(title="3D Voxel Diffusion") as app:
                 with gr.Row():
                     with gr.Column():
                         gen_size = gr.Dropdown([16, 32, 64], label="生成尺寸", value=16)
-                        gen_batch = gr.Dropdown([1, 4, 9, 16, 25], label="生成数量", value=4)
-                        gen_label = gr.Dropdown(list(dummy.shapes.keys()), label="生成标签")
-                        gen_alpha = gr.Slider(0.1, 1.0, value=0.9, label="Alpha阈值")
                         gen_schedule = gr.Dropdown(["linear", "cosine"], label="扩散Beta调度", value="linear")
                         gen_timesteps = gr.Number(label="扩散时间步数", value=1000)
-                        gen_only_mask = gr.Checkbox(label="仅生成掩码")
+                        gen_alpha = gr.Slider(0.1, 1.0, value=0.9, label="Alpha阈值")
+
                     with gr.Column():
-                        model_input = gr.File(label="上传模型文件")
+                        model_input = gr.Dropdown(label="模型文件", choices=scan_model_files())
+                        gen_batch = gr.Dropdown([1, 4, 9, 16, 25], label="生成数量", value=4)
+                        gen_label = gr.Dropdown(list(dummy.shapes.keys()), label="生成标签")
+                        gen_only_mask = gr.Checkbox(label="仅生成掩码")
                         gen_btn = gr.Button("生成样本")
 
     # 事件处理
-    train_btn.click(
+    train_event = train_btn.click(
         train_model,
         inputs=[dataset_length, train_size, train_epoch, train_batch, train_lr, train_only_mask, train_with_label, train_schedule, train_timesteps],
-        outputs=[loss_plot, model_output]
+        outputs=[loss_plot, model_output],
+        concurrency_limit=1
+    )
+
+    stop_train_btn.click(
+        lambda: stop_training_event.set(),
+        inputs=None,
+        outputs=None,
+    )
+
+    train_btn.click(
+        lambda: [gr.Button(interactive=False), gr.Button(interactive=True)],
+        outputs=[train_btn, stop_train_btn]
+    )
+    train_event.then(
+        lambda: [gr.Button(interactive=True), gr.Button(interactive=False), gr.Dropdown(choices=scan_model_files())],
+        outputs=[train_btn, stop_train_btn, model_input]
     )
 
     gen_btn.click(
@@ -243,7 +281,7 @@ with gr.Blocks(title="3D Voxel Diffusion") as app:
     model_input.change(
         update_gen_only_mask,
         inputs=[model_input, gen_only_mask, gen_size],
-        outputs=[gen_only_mask, gen_size]
+        outputs=[gen_only_mask, gen_size, model_input]
     )
 
 if __name__ == "__main__":

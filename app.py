@@ -37,32 +37,31 @@ def voxels_to_mesh(
             for y in range(voxels.shape[1]):
                 for z in range(voxels.shape[2]):
                     r, g, b, a = voxels[x, y, z]
-                    if a > 0:  # 仅处理非透明体素
-                        # 创建立方体，稍小一些以形成线框效果
+                    if a > 0:  # only non-transparent voxels are processed
+                        # Create a cube, slightly smaller to create a wireframe effect
                         if only_mask:
                             cube_scale = 0.9
                         else:
                             cube_scale = 1.0
                         cube = o3d.geometry.TriangleMesh.create_box(width=cube_scale, height=cube_scale, depth=cube_scale)
-                        # 居中放置立方体，留出间隙形成线框效果
+                        # Place the cube in the center, leaving a gap to create a wireframe effect
                         offset = (1 - cube_scale) / 2
                         cube.translate([x + offset + offset_x, y + offset, z + offset + offset_z], relative=False)
-                        # 设置颜色（顶点颜色）
+                        # Set color (vertex color)
                         color = np.array([r, g, b], dtype=np.float32) / 255.0
                         cube.vertex_colors = o3d.utility.Vector3dVector(
                             np.tile(color, (len(cube.vertices), 1))
                         )
                         cubes.append(cube)
-    # 合并所有立方体
+    # Merge all cubes
     combined_mesh = o3d.geometry.TriangleMesh()
     for cube in cubes:
         combined_mesh += cube
     if only_mask:
-        combined_mesh.compute_vertex_normals()
+        combined_mesh.paint_uniform_color([0.5, 0.5, 0.5])
     return combined_mesh
 
 
-# 训练功能封装
 def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, schedule, timestep, progress=gr.Progress(track_tqdm=True)):
     global stop_training_event
     stop_training_event.clear()
@@ -72,7 +71,6 @@ def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, sche
     only_mask = bool(only_mask)
     SIZE = int(size)
 
-    # 使用虚拟数据集进行训练
     dataset = DummyDataset(length=length, size=SIZE)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, generator=torch.Generator(device=device))
 
@@ -117,7 +115,6 @@ def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, sche
         loss_history.append(avg_loss)
         print(f'Epoch {epoch + 1} Loss: {avg_loss:.4f}')
 
-    # 可视化损失曲线
     plt.figure(figsize=(10, 5))
     plt.plot(loss_history)
     plt.title('Training Loss')
@@ -133,7 +130,6 @@ def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, sche
         suffix.append('labeled')
     model_name += '_'.join(suffix)
 
-    # 保存模型
     torch.save(model.state_dict(), f'models/{model_name}.pth')
     yield "results/loss_curve.png", f'models/{model_name}.pth'
 
@@ -159,7 +155,6 @@ def update_gen_only_mask(model_file, only_mask, size):
     return only_mask, gr.Dropdown(value=size), gr.Dropdown(choices=scan_model_files())
 
 
-# 生成样本功能封装
 def generate_sample(model_path, size, batch_size, label, alpha, only_mask, schedule, timestep, progress=gr.Progress(track_tqdm=True)):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if "only_mask" in model_path:
@@ -208,46 +203,46 @@ def generate_sample(model_path, size, batch_size, label, alpha, only_mask, sched
 
 # Gradio界面
 with gr.Blocks(title="3D Voxel Diffusion") as app:
-    gr.Markdown("# 3D体素扩散模型训练与生成")
+    gr.Markdown("# 3D voxel diffusion model training and generation")
 
     with gr.Tabs():
-        with gr.TabItem("训练"):
+        with gr.TabItem("Train"):
             with gr.Row():
                 with gr.Column():
-                    dataset_length = gr.Number(label="数据集大小", value=40000)
-                    train_size = gr.Dropdown([16, 32, 64], label="模型尺寸", value=16)
-                    train_epoch = gr.Number(label="训练轮数", value=10)
-                    train_batch = gr.Dropdown([4, 8, 16], label="批次大小", value=4)
-                    train_lr = gr.Number(label="学习率", value=1e-4)
-                    train_schedule = gr.Dropdown(["linear", "cosine"], label="扩散Beta调度", value="linear")
-                    train_timesteps = gr.Number(label="扩散时间步数", value=1000)
+                    dataset_length = gr.Number(label="Dataset size", value=40000)
+                    train_size = gr.Dropdown([16, 32, 64], label="Model size", value=16)
+                    train_epoch = gr.Number(label="Epoch", value=10)
+                    train_batch = gr.Dropdown([4, 8, 16], label="Batch size", value=4)
+                    train_lr = gr.Number(label="Learning rate", value=1e-4)
+                    train_schedule = gr.Dropdown(["linear", "cosine"], label="Schedule of `beta`", value="linear")
+                    train_timesteps = gr.Number(label="Timestep", value=1000)
 
                 with gr.Column():
-                    loss_plot = gr.Image(label="损失曲线")
-                    model_output = gr.File(label="输出模型")
-                    train_only_mask = gr.Checkbox(label="仅训练掩码")
-                    train_with_label = gr.Checkbox(label="使用标签", value=True)
-                    train_btn = gr.Button("开始训练", interactive=True)
-                    stop_train_btn = gr.Button("停止训练", interactive=False)
+                    loss_plot = gr.Image(label="Loss curve")
+                    model_output = gr.File(label="Output model")
+                    train_only_mask = gr.Checkbox(label="Only mask (no color)")
+                    train_with_label = gr.Checkbox(label="Use label", value=True)
+                    train_btn = gr.Button("Start", interactive=True)
+                    stop_train_btn = gr.Button("Stop", interactive=False)
 
-        with gr.TabItem("生成"):
+        with gr.TabItem("Sample"):
             with gr.Column():
                 with gr.Row():
-                    gen_preview = gr.Model3D(label="生成预览", clear_color=(0, 0, 0, 0))
+                    gen_preview = gr.Model3D(label="Preview", clear_color=(0, 0, 0, 0), height=240)
 
                 with gr.Row():
                     with gr.Column():
-                        gen_size = gr.Dropdown([16, 32, 64], label="生成尺寸", value=16)
-                        gen_schedule = gr.Dropdown(["linear", "cosine"], label="扩散Beta调度", value="linear")
-                        gen_timesteps = gr.Number(label="扩散时间步数", value=1000)
-                        gen_alpha = gr.Slider(0.1, 1.0, value=0.9, label="Alpha阈值")
+                        gen_size = gr.Dropdown([16, 32, 64], label="Model size", value=16)
+                        gen_schedule = gr.Dropdown(["linear", "cosine"], label="Schedule of `beta`", value="linear")
+                        gen_timesteps = gr.Number(label="Timestep", value=1000)
+                        gen_alpha = gr.Slider(0.1, 1.0, value=0.9, label="Alpha threshold")
 
                     with gr.Column():
-                        model_input = gr.Dropdown(label="模型文件", choices=scan_model_files())
-                        gen_batch = gr.Dropdown([1, 4, 9, 16, 25], label="生成数量", value=4)
-                        gen_label = gr.Dropdown(list(dummy.shapes.keys()), label="生成标签")
-                        gen_only_mask = gr.Checkbox(label="仅生成掩码")
-                        gen_btn = gr.Button("生成样本")
+                        model_input = gr.Dropdown(label="Model", choices=scan_model_files())
+                        gen_batch = gr.Dropdown([1, 4, 9, 16, 25], label="Count", value=4)
+                        gen_label = gr.Dropdown(list(dummy.shapes.keys()), label="Label")
+                        gen_only_mask = gr.Checkbox(label="Only mask (no color)")
+                        gen_btn = gr.Button("Generate")
 
     # 事件处理
     train_event = train_btn.click(

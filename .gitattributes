@@ -1,0 +1,2 @@
+models/voxel_diffusion_16_3_labeled.pth filter=lfs diff=lfs merge=lfs -text
+models/voxel_diffusion_16_3_only_mask_labeled.pth filter=lfs diff=lfs merge=lfs -text

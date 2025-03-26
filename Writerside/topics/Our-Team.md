@@ -23,7 +23,11 @@
 
 - Record experimental data.
 
-- Prepare some documents and reports.
+- Prepare documents and reports.
+
+- Select and study models to help determine the project direction and planning of the team.
+
+- Conduct in-depth research on the model to provide theoretical support for the project.
 
 ## Documentation Specialist
 
@@ -35,7 +39,7 @@
 
 - Create and edit online documents, write complete reports and articles.
 
-- Select and study data sets and models to help determine the project direction and planning of the team.
+- Select and study models to help determine the project direction and planning of the team.
 
 - Conduct in-depth research on the model to provide theoretical support for the project.
 
@@ -47,7 +51,7 @@
 
 - Interpret the experimental results
 
-- Select and study the data set and model to help determine the project direction and planning of the team.
+- Select and study models to help determine the project direction and planning of the team.
 
 - Prepare some documents and reports.
 

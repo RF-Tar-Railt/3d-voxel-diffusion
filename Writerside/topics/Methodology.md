@@ -70,7 +70,7 @@ The core of the diffusion model is the noise prediction model. This project uses
 #### 3.3.2 Time and Label Embedding
 
 - The time step $t$ is converted to a high-dimensional vector via sinusoidal positional encoding, processed through an MLP, and added to the residual block features.
-- Class labels are transformed into a [20]-dimensional vector through an embedding layer and added to the time embedding, enabling conditional generation.
+- Class labels are transformed into a vector through an embedding layer [20] and added to the time embedding, enabling conditional generation.
 
 ### 3.4 Dataset
 

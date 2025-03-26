@@ -41,6 +41,16 @@
 
 [5] Xu, H., Li, Z., Wei, Y., & Gu, P. (2024). A method for generating 3D objects with artistic styles based on diffusion models. _Communications of the Chinese Association for Artificial Intelligence, 14_ (4).
 
+@article{Xu2024,
+  author = {Xu, H. and Li, Z. and Wei, Y. and Gu, P.},
+  title = {A method for generating 3D objects with artistic styles based on diffusion models},
+  journal = {Communications of the Chinese Association for Artificial Intelligence},
+  year = {2024},
+  volume = {14},
+  number = {4}
+}
+
+
 [6] Guan, J., Qian, W. W., Peng, X., Su, Y., Peng, J., & Ma, J. (2023). 3d equivariant diffusion for target-aware molecule generation and affinity prediction. arXiv preprint arXiv:2303.03543.
 
 @article{guan20233d,

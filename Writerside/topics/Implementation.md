@@ -15,6 +15,7 @@ subgraph Model
 B -->|UNet Noise Prediction| E[3D UNet]
 end
 ```
+![system_arch](system_architecture.png)
 
 ### 4.1.1 Core of the Diffusion Model
 

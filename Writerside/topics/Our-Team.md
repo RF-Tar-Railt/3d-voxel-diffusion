@@ -5,7 +5,7 @@
 
 ## Project Manager and Developer
 
-### ZHONG Cheng
+### TIAN Run
 
 **Role**: 
 
@@ -17,21 +17,11 @@
 
 - Model configuration, training and verification.
 
-- Record experimental data.
-
-- Prepare some documents and reports.
-
-## Frontend Developer
-
-### XU Xin
-
-**Role**: 
-
 - Build and optimize the front-end.
 
 - Responsible for the connection between the front-end and the model.
 
-- Create and beautify slides for project presentations.
+- Record experimental data.
 
 - Prepare some documents and reports.
 
@@ -63,11 +53,23 @@
 
 ## Research Specialist 2
 
-### TIAN Run
+### ZHONG Cheng
 
 **Role**: 
 
 - Summarize the project
+
+- Conduct in-depth research on the model to provide theoretical support for the project.
+
+- Prepare some documents and reports.
+
+## Research Specialist 3
+
+### XU Xin
+
+**Role**: 
+
+- Create and beautify slides for project presentations.
 
 - Conduct in-depth research on the model to provide theoretical support for the project.
 

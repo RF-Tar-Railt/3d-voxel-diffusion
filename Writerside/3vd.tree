@@ -4,7 +4,16 @@
 
 <instance-profile id="3vd"
                  name="3D Voxel Diffusion"
-                 start-page="starter-topic.md">
+                 start-page="3D-Voxel-Diffusion.md">
 
-    <toc-element topic="starter-topic.md"/>
+    <toc-element topic="3D-Voxel-Diffusion.md"/>
+    <toc-element topic="Introduction.md"/>
+    <toc-element topic="Related-Work.md"/>
+    <toc-element topic="Methodology.md"/>
+    <toc-element topic="Implementation.md"/>
+    <toc-element topic="Results.md"/>
+    <toc-element topic="Discussion.md"/>
+    <toc-element topic="Conclusion.md"/>
+    <toc-element topic="References.md"/>
+    <toc-element topic="Our-Team.md"/>
 </instance-profile>

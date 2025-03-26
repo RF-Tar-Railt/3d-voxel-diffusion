@@ -33,5 +33,5 @@ python train.py --size 16 --batch 4 --epoch 10 --length 40000 --only-mask --with
 **Sample the model**
 
 ```bash
-python sample.py .\models\voxel_diffusion_16_3_only_mask_labeled.pth --label sphere --batch 16
+python sample.py .\models\voxel_diffusion_16_3_labeled.pth --label sphere --batch 9
 ```

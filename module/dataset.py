@@ -364,7 +364,7 @@ if __name__ == '__main__':
         alpha_mask = voxel[..., 3] > 127
         face_colors = voxel[..., :3] / 255
         face_colors[~alpha_mask] = 0
-        ax.voxels(alpha_mask, facecolors=face_colors, edgecolor='k')
+        ax.voxels(alpha_mask, facecolors=face_colors)
         ax.set_title(shape)
 
     plt.show()

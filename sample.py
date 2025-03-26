@@ -71,8 +71,9 @@ if __name__ == '__main__':
         if only_mask:
             ax.voxels(voxels[i], edgecolor='k')
         else:
-            ax.voxels(voxels[i], facecolors=colors[i] / 255, edgecolor='k')
+            ax.voxels(voxels[i], facecolors=colors[i] / 255, edgecolor='k' if only_mask else None)
         ax.set_xlim([0, SIZE])
         ax.set_ylim([0, SIZE])
         ax.set_zlim([0, SIZE])
+        ax.set_axis_off()
     plt.show()

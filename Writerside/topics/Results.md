@@ -3,6 +3,7 @@
 ## Training Loss
 
 ![Left Panel](bs_loss.png)
+
 ![Right Panel](lr_loss.png)
 
 <!-- ![loss compare](loss_compare.jpg) -->

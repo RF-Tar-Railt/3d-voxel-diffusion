@@ -2,19 +2,21 @@
 
 ## 4.1 Model and System Details
 
-The system architecture is divided into three parts: **Data Generation**, **Diffusion Model**, and **3D UNet**:
+![structure](structure.jpg)
 
-```mermaid
-graph LR
-A[Synthetic Data Generation] --> B[Diffusion Model Training]
-B --> C[Conditional Sampling Generation]
-subgraph Data Generation
-A -->|Generate Labeled Voxels| D[DummyDataset]
-end
-subgraph Model
-B -->|UNet Noise Prediction| E[3D UNet]
-end
-```
+Figure 1 illustrates the overall process of the proposed 3D Voxel Diffusion Model and the label embedding mechanism. Similar to the previously described system architecture, this figure clearly shows how the initial voxel data $ \mathbf{x}_0 $ evolves under noise to become $ \mathbf{x}_t $ and is then transformed by a 3D U-Net denoising module to produce the target output. Notably, the U-Net backbone integrates both the time step $t$ and the category label (Label) embeddings to enable controlled generation of different shape types (e.g., "sphere=0", "chair=3"). The figure comprises the following parts:
+
+1. **Forward Diffusion**  
+   On the left, the initial 3D object’s voxel representation $ \mathbf{x}_0 $ gradually evolves into a completely noise-covered $ \mathbf{x}_t $ through successive noise injections. Simultaneously, category labels (e.g., shown as "sphere→0") are later incorporated into the network via embedding vectors.
+
+2. **Denoising Process and U-Net Structure**  
+   The central "Denoising Module" comprises the main body of the U-Net denoising network. It processes the noisy input $ \mathbf{x}_t $ along with an embedding vector that fuses the time step $t$ and the category label, in order to predict the next stage $ \mathbf{x}_{t-1} $ The inset at the top-right details the internal U-Net structure:
+   - The noisy $ \mathbf{x}_t $ is added to both the label embedding and the output of a fully connected layer corresponding to the time step.
+   - Through multiple layers of convolutions, residual blocks, and attention modules, the U-Net progressively removes noise while enforcing the conditional constraints based on the category label.
+   - Skip connections are utilized within the stacking of convolutions and residual blocks to preserve multi-scale features, which aids in reconstructing the target structure during the final decoding phase.
+
+3. **Supervision & Sampling**  
+   In the reverse diffusion stage, the model learns to denoise at each time step by computing the loss between the actual noise and the predicted noise. During inference, the user can input a label (e.g., "chair=3" or "table=5") to generate the target shape from random noise, optionally including corresponding color or transparency (if additional channels are provided).
 
 ### 4.1.1 Core of the Diffusion Model
 

@@ -21,7 +21,7 @@ Figure 1 illustrates the overall process of the proposed 3D Voxel Diffusion Mode
 ### 4.1.1 Core of the Diffusion Model
 
 - **Noise Scheduling**: Supports `linear` or  `cosine` noise scheduling, controlling noise intensity through `betas`.
-- **Joint Prediction**: If the model output channels are twice that of the input, they are split into predicted noise and variance interpolation coefficient. The variance interpolation coefficient is mapped to $[0,1]$ using an S-shaped function, mixing the preset maximum variance $(β_t)$ and the posterior variance $(𝛽̃_t)$ to yield the final variance. The model dynamically adjusts the variance in the reverse process via this coefficient, balancing the preset schedule with learned results to improve generation quality or accelerate sampling [19].
+- **Joint Prediction**: If the model output channels are twice that of the input, they are split into predicted noise and variance interpolation coefficient. The variance interpolation coefficient is mapped to $[0,1]$ using an S-shaped function, mixing the preset maximum variance ${\beta}_t$ and the posterior variance $\tilde{\beta}_t$ to yield the final variance. The model dynamically adjusts the variance in the reverse process via this coefficient, balancing the preset schedule with learned results to improve generation quality or accelerate sampling [19].
 - **Variance Optimization**: When the model jointly predicts noise and variance, the main loss is the MSE between the predicted noise and the actual noise, with an additional loss “vb” representing the variational bound (KL divergence between the variational distribution $q(x_{t-1}|x_t, x_0)$ and the model predicted distribution $p_θ(x_{t-1}|x_t)$, computed via `_vb_terms_bpd`. The variance interpolation coefficient affects “vb” through KL divergence, enabling the model to adjust variance to minimize the difference between the true posterior and the predicted distribution. The final loss is `MSE + vb`, where vb is weighted and guides the optimization of the joint prediction of noise and variance via backpropagation.
 - **DDIM (Denoising Diffusion Implicit Models)**: The system supports DDIM sampling.
 
@@ -39,7 +39,7 @@ Figure 1 illustrates the overall process of the proposed 3D Voxel Diffusion Mode
   - **Feature Normalization**: Normalizes the input feature map using group normalization.
   - **QKV Projection**: Projects the input features into Query, Key, and Value tensors with a $1^3$ convolution (expanding the channels to 3 times).
   - **Self-Attention Computation**:
-    - Flattens the feature map, computes the similarity matrix Q·K^T, and normalizes it with Softmax.
+    - Flattens the feature map, computes the similarity matrix $Q·K^T$, and normalizes it with Softmax.
     - Uses scaled dot-product attention to prevent gradient explosion.
     - Formula: $Attn(Q, K, V) = Softmax( \frac{QK^T }{\sqrt(d)}) V$
   - **Residual Connection**: The attention output is projected back using a $1^3$ convolution and added to the original input to preserve local details.

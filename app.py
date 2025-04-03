@@ -65,6 +65,8 @@ def voxels_to_mesh(
 def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, schedule, timestep, progress=gr.Progress(track_tqdm=True)):
     global stop_training_event
     stop_training_event.clear()
+    if Path("results/loss_curve.png").exists():
+        Path("results/loss_curve.png").unlink()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.set_default_device(device)
     epochs = int(epoch)
@@ -115,12 +117,13 @@ def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, sche
         loss_history.append(avg_loss)
         print(f'Epoch {epoch + 1} Loss: {avg_loss:.4f}')
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(loss_history)
-    plt.title('Training Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.savefig("results/loss_curve.png")
+        plt.figure(figsize=(10, 5))
+        plt.plot(loss_history)
+        plt.title('Training Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.savefig("results/loss_curve.png")
+        yield gr.File(None)
 
     model_name = f'voxel_diffusion_'
     suffix = [f'{SIZE}_3']
@@ -131,7 +134,7 @@ def train_model(length, size, epoch, batch_size, lr, only_mask, with_label, sche
     model_name += '_'.join(suffix)
 
     torch.save(model.state_dict(), f'models/{model_name}.pth')
-    yield "results/loss_curve.png", f'models/{model_name}.pth'
+    yield gr.File(f'models/{model_name}.pth')
 
 
 def scan_model_files():
@@ -218,7 +221,17 @@ with gr.Blocks(title="3D Voxel Diffusion") as app:
                     train_timesteps = gr.Number(label="Timestep", value=1000)
 
                 with gr.Column():
-                    loss_plot = gr.Image(label="Loss curve")
+                    def _update():
+                        if Path("results/loss_curve.png").exists():
+                            return "results/loss_curve.png"
+                        return None
+
+                    loss_plot = gr.Image(
+                        _update,
+                        label="Loss curve",
+                        elem_id="loss_plot",
+                        every=0.5,
+                    )
                     model_output = gr.File(label="Output model")
                     train_only_mask = gr.Checkbox(label="Only mask (no color)")
                     train_with_label = gr.Checkbox(label="Use label", value=True)
@@ -248,7 +261,7 @@ with gr.Blocks(title="3D Voxel Diffusion") as app:
     train_event = train_btn.click(
         train_model,
         inputs=[dataset_length, train_size, train_epoch, train_batch, train_lr, train_only_mask, train_with_label, train_schedule, train_timesteps],
-        outputs=[loss_plot, model_output],
+        outputs=[model_output],
         concurrency_limit=1
     )
 
@@ -278,6 +291,9 @@ with gr.Blocks(title="3D Voxel Diffusion") as app:
         inputs=[model_input, gen_only_mask, gen_size],
         outputs=[gen_only_mask, gen_size, model_input]
     )
+
+    if Path("results/loss_curve.png").exists():
+        Path("results/loss_curve.png").unlink()
 
 if __name__ == "__main__":
     app.launch()

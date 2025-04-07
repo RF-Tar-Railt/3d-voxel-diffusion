@@ -16,6 +16,7 @@
 - Y-axis (Loss): Training loss.
 
 Observations:
+
 1. Initial Loss (around Epoch 0):
    - Batch Size 8 (blue curve) starts at approximately 0.3.
    - Batch Size 16 (orange curve) shows a slightly higher initial loss, around 0.4.
@@ -43,6 +44,7 @@ Observations:
   - Red: LR = 1e-4
 
 Observations:
+
 1. Initial Loss (Epoch 0):
    - Higher learning rates (e.g., 1e-1, blue curve) result in a higher and more volatile initial loss.
    - Lower learning rates (1e-2, 1e-3, 1e-4) demonstrate more stable initial loss values.
@@ -76,6 +78,7 @@ The forward diffusion process illustrates the gradual transition of data from it
 The reverse diffusion stage gradually removes the noise and successfully restores the main features of the data. This process verifies the model's efficiency in detail recovery and structural reconstruction, gradually restoring the full original view.
 
 ## Sampling Results
+
 - **Sphere**  
 
   ![sample_sphere](sample_sphere.png)
@@ -101,3 +104,36 @@ The reverse diffusion stage gradually removes the noise and successfully restore
   ![sample_chair](sample_chair.png)
 
 The sampling results cover a range of shapes from basic geometric forms to common objects in everyday scenarios, showcasing the model's balanced performance in detail recovery and overall structure generation. These results demonstrate that the model can precisely capture local features while maintaining global consistency, providing substantial validation for further applications.
+
+## Evaluation
+
+### Evaluation Metrics
+
+The evaluation metrics used to assess the model's performance include:
+
+- Occupancy diff: Measures the difference in spatial occupancy probability between generated and real.
+
+- Components diff: The difference between the generated and the real in the number of connected components.
+
+- Smoothness diff: The difference in smoothness between generated and real.
+
+- L1 and L2 dist: Measures the absolute or squared difference between generated and real at the voxel level.
+
+- Variance ratio: The ratio of the variance of the generated in feature space to the variance of the real data.
+
+- Class JS Divergence: Jensen-Shannon divergence between generated and real in category distribution.
+
+### Evaluation Results
+
+![Evalation](evaluate_results.png)
+
+We conducted an evaluation on one of the models (batch-size 16, epoch 10, SIZE 16, dataset size 80000), and the metrics are as follows:
+
+- occupancy_diff: 0.29
+- components_diff: 19.65
+- smoothness_diff: 0.191
+- L1 dist and L2 dist: 0.082 and 0.092
+- variance_ratio: 2.618
+- class_js_divergence: 0.013
+  
+It can be seen that the model performs well in local details and category distribution, while still needing improvement in structural rationality, spatial distribution, and diversity control.
